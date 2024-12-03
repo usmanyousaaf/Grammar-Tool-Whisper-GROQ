@@ -2,6 +2,8 @@
 
 This project integrates **audio transcription** and **grammar & vocabulary checking** features, powered by **Whisper** for transcription and **GROQ** for analysis. The tool allows you to transcribe audio recordings, check grammar and vocabulary, and receive a score for both. 
 
+## Live Demo:https://huggingface.co/spaces/usmanyousaf/Smart-Audio-Grammar-Tool
+
 ## Features
 - **Audio Transcription**: Transcribes spoken audio into text.
 - **Grammar Check**: Evaluates the grammar of the transcribed text and provides feedback.
