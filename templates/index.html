@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription with Grammar and Vocabulary Check</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #6d7be5, #8699ee);
+            font-family: 'Arial', sans-serif;
+            color: #333;
+        }
+        h1, h2, h3 {
+            margin-bottom: 20px;
+        }
+        .recording-bar {
+            width: 0;
+            height: 5px;
+            background-color: #4caf50;
+            transition: width 0.5s;
+        }
+        #transcription-result, #grammar-feedback, #vocabulary-feedback {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            min-height: 50px;
+        }
+        .feedback-section {
+            margin-top: 30px;
+        }
+        .btn {
+            margin-top: 10px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .form-select, input[type="text"] {
+            padding: 10px;
+            transition: border-color 0.3s;
+        }
+        #recording-status {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; font-weight: bold; color: #000;">Grammar and Vocabulary Checker with Audio Transcription</h1>
+        <div class="mb-3">
+            <label for="language-select" class="form-label">Select Language:</label>
+            <select id="language-select" class="form-select">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="ar">Arabic</option>
+            </select>
+        </div>
+
+        <h2>Record Audio</h2>
+        <button id="start-recording" class="btn btn-primary">Start Recording</button>
+        <button id="stop-recording" class="btn btn-danger" disabled>Stop Recording</button>
+        <div id="recording-status"></div>
+        
+        <div class="recording-container">
+            <div id="recording-bar" class="recording-bar"></div>
+        </div>
+
+        <div class="feedback-section">
+            <h3>Transcription Result:</h3>
+            <div id="transcription-result"></div>
+        </div>
+
+        <div class="feedback-section">
+            <h3>Grammar Feedback:</h3>
+            <div id="grammar-feedback"></div>
+            <p><strong>Grammar Score:</strong> <span id="grammar-score"></span>/10</p>
+
+            <h3>Vocabulary Feedback:</h3>
+            <div id="vocabulary-feedback"></div>
+            <p><strong>Vocabulary Score:</strong> <span id="vocabulary-score"></span>/10</p>
+
+            <button id="check-grammar" class="btn btn-secondary" disabled>Check Grammar and Vocabulary</button>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById("start-recording").onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            document.getElementById("recording-status").textContent = "Recording...";
+            document.getElementById("start-recording").disabled = true;
+            document.getElementById("stop-recording").disabled = false;
+
+            document.getElementById("recording-bar").style.width = '0%';
+            let recordingInterval = setInterval(() => {
+                const currentWidth = parseFloat(document.getElementById("recording-bar").style.width);
+                const newWidth = Math.min(currentWidth + 5, 100);
+                document.getElementById("recording-bar").style.width = newWidth + '%';
+                if (newWidth >= 100) {
+                    clearInterval(recordingInterval);
+                }
+            }, 1000);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                clearInterval(recordingInterval);
+                document.getElementById("recording-bar").style.width = '0%';
+
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio_data', audioBlob, 'audio.wav');
+                const selectedLanguage = document.getElementById("language-select").value;
+                formData.append('language', selectedLanguage);
+
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById("transcription-result").textContent = result.transcription;
+                document.getElementById("check-grammar").disabled = false;
+
+                audioChunks = [];
+                document.getElementById("recording-status").textContent = "Recording stopped.";
+                document.getElementById("start-recording").disabled = false;
+                document.getElementById("stop-recording").disabled = true;
+            };
+        };
+
+        document.getElementById("stop-recording").onclick = () => {
+            mediaRecorder.stop();
+        };
+
+        document.getElementById("check-grammar").onclick = async () => {
+            const transcription = document.getElementById("transcription-result").textContent;
+            const formData = new FormData();
+            formData.append('transcription', transcription);
+            const selectedLanguage = document.getElementById("language-select").value;
+            formData.append('language', selectedLanguage);
+
+            const response = await fetch('/check_grammar', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            document.getElementById("grammar-feedback").textContent = result.grammar_feedback;
+            document.getElementById("vocabulary-feedback").textContent = result.vocabulary_feedback;
+            document.getElementById("grammar-score").textContent = result.grammar_score;
+            document.getElementById("vocabulary-score").textContent = result.vocabulary_score;
+        };
+    </script>
+</body>
+</html>
