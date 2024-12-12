@@ -4,7 +4,7 @@ from flask import Flask, request, render_template, jsonify
 from groq import Groq
 
 # Set up the Groq client
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = "your_api_key"
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 app = Flask(__name__)
